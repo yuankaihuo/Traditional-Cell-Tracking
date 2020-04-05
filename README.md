@@ -1,6 +1,16 @@
 # Traditional-Cell-Tracking
+### To run it, change the two lines in main.py, and run it
+path=os.path.join("/home/huoy1/Projects/celltracking/Fluo-N2DL-HeLa/01")
 
-Thos github is adapted from
+temp_path = os.path.join("/home/huoy1/Projects/celltracking/temporary_result_Hela")
+
+
+### Enviroment
+Python 2.7 is requird!!!!!!!!!!!!
+
+
+### Source
+The github is adapted from
 
 https://github.com/Connor323/Cancer-Cell-Tracking
 
