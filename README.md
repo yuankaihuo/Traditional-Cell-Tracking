@@ -7,7 +7,7 @@ temp_path = os.path.join("/home/huoy1/Projects/celltracking/temporary_result_Hel
 
 
 
-Thos github is adapted from
+The github is adapted from
 
 https://github.com/Connor323/Cancer-Cell-Tracking
 
