@@ -90,8 +90,8 @@ class GRAPH():
                     for p1 in [pt1, pt2, pt3]:
                         if p0 != p1:
                             temp = self.length_slope(p0, p1)
-                            if temp not in slope_length[self.mark[p0]-1]:
-                                slope_length[self.mark[p0]-1].append(temp)
+                            if temp not in slope_length[self.mark[int(p0[0]), int(p0[1])]-1]:
+                                slope_length[self.mark[int(p0[0]), int(p0[1])]-1].append(temp)
 
         return slope_length
 
@@ -179,8 +179,8 @@ class GRAPH():
                 outimg.append(img_copy)
                 cv2.imshow("win_delaunay", img_copy)
                 cv2.waitKey(50)
-
-        imageio.mimsave('graph_contruction.gif', outimg, duration=0.3)
+        if animate:
+            imageio.mimsave('graph_contruction.gif', outimg, duration=0.3)
         # Draw delaunay triangles
         slope_length = self.draw_delaunay( img_orig, subdiv, (255, 255, 255) );
      
@@ -195,7 +195,7 @@ class GRAPH():
             if k == 27:         # wait for ESC key to exit
                 cv2.destroyAllWindows()
             elif k == ord('s'): # wait for 's' key to save and exit
-                cv2.imwrite('messigray.png',img)
+                cv2.imwrite('messigray.png',img_orig)
                 cv2.destroyAllWindows()
 
         return centroid, slope_length

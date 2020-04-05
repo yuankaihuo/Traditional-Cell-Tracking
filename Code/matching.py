@@ -215,8 +215,14 @@ class SIMPLE_MATCH():
 			height = maxy - miny + 1
 			width = maxx - minx + 1
 
-			img0 = symmetry(s0, (height, width))
-			img1 = symmetry(s1, (height, width))
+			height = np.max((height,s0.shape[0],s1.shape[0]))
+			width = np.max((width,s0.shape[1],s1.shape[1]))
+
+			try:
+				img0 = symmetry(s0, (height, width))
+				img1 = symmetry(s1, (height, width))
+			except:
+				aaa = 1
 
 			num = 0.
 			deno = 0.
@@ -348,6 +354,8 @@ class SIMPLE_MATCH():
 				minx, miny, maxx, maxy = maxsize_image(s0, s1)
 				height = maxy - miny + 1
 				width = maxx - minx + 1
+				height = np.max((height, s0.shape[0], s1.shape[0]))
+				width = np.max((width, s0.shape[1], s1.shape[1]))
 
 				img0 = symmetry(s0, (height, width))
 				img1 = symmetry(s1, (height, width))
@@ -463,12 +471,15 @@ class SIMPLE_MATCH():
 						for pv0 in vector:
 							if centriod_distance(pv0.c, pv1.c) < max_distance and \
 								shape_similarity(pv0.s[0], pv1.s[0]) > min_shape_similarity:
-								self.v1[i].id = pv0.id
-								self.v1[i].l = pv0.l
+								try:
+									self.v1[i].id = pv0.id
+									self.v1[i].l = pv0.l
+								except:
+									aaa = 1
 								print "missing in frame: ", self.i1, "find in frame: ", \
 								       self.i0-index, "ID: ", pv0.id, " at: ", pv0.c
-								for i in range(self.i0-index+1, self.i1):
-									mask[i] = add_marker(self.i0-index, i, pv0.id)
+								for ii in range(self.i0-index+1, self.i1):
+									mask[ii] = add_marker(self.i0-index, ii, pv0.id)
 		return mask
 
 	def new_id(self):
@@ -509,7 +520,7 @@ class SIMPLE_MATCH():
 			for pt, pv in zip(pts, self.v1):
 				mask[marker==pt] = pv.id
 
-		os.chdir("test")
+		os.chdir(".")
 		write_image(mask, "mask", index)
 		os.chdir(os.pardir)
 		return mask	

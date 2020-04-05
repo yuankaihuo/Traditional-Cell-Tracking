@@ -139,47 +139,94 @@ def main():
     # Build Delaunay Triangulation
     for i in range(len(images)):
         graph = GRAPH(mark, binarymark, i)
-        tempcentroid, tempslope_length = graph.run(True)
+        tempcentroid, tempslope_length = graph.run(False)
         centroid.append(tempcentroid)
         slope_length.append(tempslope_length)
+        print('building Delaunay Triangulation %d/%d '%(i, len(images)))
 
     # Build the Dissimilarity measure vector
     vector = []
     for i in range(len(images)):
         print "  feature vector: image ", i
-        v = FEAVECTOR()
+        v = FEA()
         v.set_centroid(centroid[i])
         v.set_spatial(slope_length[i])
-        v.set_shape(images[i], markers[i])
+        v.set_shape(enhance_images[i], mark[i])
         v.set_histogram()
         v.add_label()
-        v.add_id(markers[i].max(), i)
+        v.add_id(mark[i].max(), i)
         vector.append(v.generate_vector())
-        
+
         print "num of nuclei: ", len(vector[i])
 
     # Feature matching
+    mask = []
+
     for i in range(len(images)-1):
         print "  Feature matching: image ", i
-        m = SIMPLE_MATCH(i,i+1,[images[i], images[i+1]], vector)
-        mask.append(m.generate_mask(markers[i], i)) 
+        m = MAT(i,i+1,[images[i], images[i+1]], vector)
+        mask.append(m.generate_mask(mark[i], i))
         m.find_match(0.3)
         mask = m.match_missing(mask, max_frame=2, max_distance=20)
         vector[i+1] = m.mitosis_refine()
-        m.new_id()  
+        m.new_id()
         vector[i+1] = m.return_vectors()
 
     # write images if necessary
+    # os.chdir(temporary_result)
+    # for i in range(len(images)):
+    #     # write_image(imgpair, 'imgpair', i)
+    #     write_image(threh[i].astype(np.uint8)*255, 'threh', i)
+    #     write_image(enhance_images[i], 'normalize', i)
+    #     write_image(mark[i].astype(np.uint8), 'mark', i)
+    #     write_image(binarymark[i].astype(np.uint8), 'binarymark', i)
+    #     # write_image(tempimg[i].astype(np.uint8), 'tempimg', i)
+    #     write_image(dismap[i].astype(np.uint8), 'dismap', i)
+    # os.chdir(os.pardir)
+
+    # write gif image showing the final result
+    def find_max_id(temp_vector):
+        max_id = 0
+        for pv in temp_vector:
+            for p in pv:
+                if p.id > max_id:
+                    max_id = p.id
+        return max_id
+
+    # This part is to mark the result in the normolized image and
+    # write the gif image.
+    max_id = find_max_id(vector)
+    max_id = int(max_id)
+    colors = [np.random.randint(0, 255, size=max_id), \
+              np.random.randint(0, 255, size=max_id), \
+              np.random.randint(0, 255, size=max_id)]
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    selecy_id = 9
+    enhance_imgs = []
+    for i, m in enumerate(mask):
+        print "  write the gif image: image ", i
+        enhance_imgs.append(cv2.cvtColor(enhance_images[i], cv2.COLOR_GRAY2RGB))
+        for pv in vector[i]:
+            center = pv.c
+            if not pv.l:
+                color = (colors[0][int(pv.id) - 1], \
+                         colors[1][int(pv.id) - 1], \
+                         colors[2][int(pv.id) - 1],)
+            else:
+                color = (colors[0][int(pv.l) - 1], \
+                         colors[1][int(pv.l) - 1], \
+                         colors[2][int(pv.l) - 1],)
+
+            if m[int(center[0]), int(center[1])]:
+                enhance_imgs[i][m == pv.id] = color
+                cv2.putText(enhance_imgs[i], \
+                            str(int(pv.id)), (int(pv.c[1]), \
+                                              int(pv.c[0])),
+                            font, 0.5, \
+                            (255, 255, 255), 1)
     os.chdir(temporary_result)
-    for i in range(len(images)):
-        write_image(imgpair_raw, 'imgpair_raw', i)
-        write_image(threh[i].astype(np.uint8)*255, 'threh', i)
-        write_image(enhance_images[i], 'normalize', i)
-        write_image(mark[i].astype(np.uint8), 'mark', i)
-        write_image(binarymark[i].astype(np.uint8), 'binarymark', i)
-        write_image(tempimg[i].astype(np.uint8), 'tempimg', i)
-        write_image(dismap[i].astype(np.uint8), 'dismap', i)
-    os.chdir(os.pardir)
+    imageio.mimsave('mitosis_final.gif', enhance_imgs, duration=0.6)
+    print "finish!"
 
 # if python says run, then we should run
 if __name__ == '__main__':
