@@ -6,6 +6,8 @@ path=os.path.join("/home/huoy1/Projects/celltracking/Fluo-N2DL-HeLa/01")
 temp_path = os.path.join("/home/huoy1/Projects/celltracking/temporary_result_Hela")
 
 
+Python 2.7 is requird!!!!!!!!!!!!
+
 
 The github is adapted from
 
