@@ -102,7 +102,7 @@ def normalize(image):
 
 
 path=os.path.join("/home/huoy1/Projects/celltracking/Fluo-N2DL-HeLa/01")
-temp_path = os.path.join("/home/huoy1/Projects/celltracking/temporary_result_Hela")
+temporary_result = os.path.join("/home/huoy1/Projects/celltracking/temporary_result_Hela")
 
 for r,d,f in os.walk(path):
     images = []
@@ -137,53 +137,114 @@ def load_image(title, index, imgformat='.tiff'):
     else:
         return []
 
+def ws_simple(enhance_images):
+    mark = []
+    outbinary = []
+    for ei in range(len(enhance_images)):
+        img = np.zeros((enhance_images[ei].shape[0], enhance_images[ei].shape[1], 3), np.uint8)
+        for c in range(3):
+            img[:, :, c] = 255 - enhance_images[ei]
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        # ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        ret, thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)
+
+        # noise removal
+        kernel = np.ones((3, 3), np.uint8)
+        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+
+        # sure background area
+        sure_bg = cv2.dilate(opening, kernel, iterations=3)
+
+        # Finding sure foreground area
+        dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+        ret, sure_fg = cv2.threshold(dist_transform, 0.2 * dist_transform.max(), 255, 0)
+
+        # Finding unknown region
+        sure_fg = np.uint8(sure_fg)
+        unknown = cv2.subtract(sure_bg, sure_fg)
+
+        # Marker labelling
+        ret, markers = cv2.connectedComponents(sure_fg)
+
+        # # Add one to all labels so that sure background is not 0, but 1
+        # markers = markers + 1
+
+        # Now, mark the region of unknown with zero
+        markers[unknown == 255] = 0
+
+        markers = cv2.watershed(img, markers)
+        u, counts = np.unique(markers, return_counts=True)
+        counter = dict(zip(u, counts))
+        valid_i = 1
+        markers_unique = np.zeros(markers.shape)
+        for i in counter:
+            if counter[i] > 1200:
+                markers_unique[markers == i] = 0
+            else:
+                markers_unique[markers == i] = valid_i
+                valid_i = valid_i+1
+
+        mark.append(markers_unique.astype(np.uint8))
+
+        binary = markers_unique.copy()
+        # binary[markers <= 1] = 0
+        binary[markers_unique > 0] = 255
+        outbinary.append(binary.astype(np.uint8))
+
+    return outbinary, mark
+
 def main():
 
-    # # Binarization
-    th = athresh(enhance_images)
-    threh = th.applythresh()
-    write_image(threh[0]*255, "threh", 0)
-    # Nuclei center detection
-    gvf = GVF(images, threh)
-    dismap = gvf.distancemap()
-    newimg = gvf.new_image(4, dismap) # choose alpha as 0.4.
-    write_image((dismap[0]*10).astype(np.uint8), "dismap", 0)
-    write_image(newimg[0], "newimg", 0)
-    gradimg = gvf.compute_gvf(newimg)
+    use_simple_marker = True
 
-    temporary_result = os.path.join(temp_path)
-    if not os.path.exists(temporary_result):
-        os.makedirs(temporary_result)
-    os.chdir(temporary_result)
-    imgpairs = []
-    # bin_imgpairs = []
-    # imgpair_raws = []
-    for i, grad in enumerate(gradimg):
-        load_img = load_image('imgpair', i)
-        if load_img == []:
-            imgpair, bin_imgpair, imgpair_raw = gvf.find_certer(grad, i)
-            imgpairs.append(imgpair)
-            # bin_imgpairs.append(bin_imgpair)
-            # imgpair_raws.append(imgpair_raw)
-            # write_image(imgpair_raw, 'imgpair_raw', i)
-            # write_image(bin_imgpair, 'bin_imgpair', i)
-            write_image(imgpair, 'imgpair', i)
-        else:
-            imgpair = load_img
-            imgpairs.append(imgpair)
+    # Binarization
+    if use_simple_marker:
+        binarymark, mark = ws_simple(enhance_images)
+    else:
+        th = athresh(enhance_images)
+        threh = th.applythresh()
+        write_image(threh[0]*255, "threh", 0)
+        # Nuclei center detection
+        gvf = GVF(images, threh)
+        dismap = gvf.distancemap()
+        newimg = gvf.new_image(10, dismap) # choose alpha as 0.4.
+        write_image((dismap[0]*10).astype(np.uint8), "dismap", 0)
+        write_image(newimg[0], "newimg", 0)
+        gradimg = gvf.compute_gvf(newimg)
 
-    os.chdir(os.pardir)
+        if not os.path.exists(temporary_result):
+            os.makedirs(temporary_result)
+        os.chdir(temporary_result)
+        imgpairs = []
+        # bin_imgpairs = []
+        # imgpair_raws = []
+        for i, grad in enumerate(gradimg):
+            load_img = load_image('imgpair', i)
+            if load_img == []:
+                imgpair, bin_imgpair, imgpair_raw = gvf.find_certer(grad, i)
+                imgpairs.append(imgpair)
+                # bin_imgpairs.append(bin_imgpair)
+                # imgpair_raws.append(imgpair_raw)
+                # write_image(imgpair_raw, 'imgpair_raw', i)
+                # write_image(bin_imgpair, 'bin_imgpair', i)
+                write_image(imgpair, 'imgpair', i)
+            else:
+                imgpair = load_img
+                imgpairs.append(imgpair)
 
-    # watershed
-    ws = WS(newimg, imgpairs)
-    wsimage, binarymark, mark = ws.watershed_compute()
+        os.chdir(os.pardir)
+
+        # watershed
+        ws = WS(newimg, imgpairs)
+        wsimage, binarymark, mark = ws.watershed_compute()
 
     centroid = []
     slope_length = []
     # Build Delaunay Triangulation
     for i in range(len(images)):
         graph = GRAPH(mark, binarymark, i)
-        tempcentroid, tempslope_length = graph.run(False)
+        tempcentroid, tempslope_length = graph.run(False) # how many centroid points, and slope and length connect to this point
+
         centroid.append(tempcentroid)
         slope_length.append(tempslope_length)
         print('building Delaunay Triangulation %d/%d '%(i, len(images)))
@@ -199,7 +260,8 @@ def main():
         v.set_histogram()
         v.add_label()
         v.add_id(mark[i].max(), i)
-        vector.append(v.generate_vector())
+        gen_vec = v.generate_vector()
+        vector.append(gen_vec)
 
         print "num of nuclei: ", len(vector[i])
 
@@ -211,22 +273,10 @@ def main():
         m = MAT(i,i+1,[images[i], images[i+1]], vector)
         mask.append(m.generate_mask(mark[i], i))
         m.find_match(0.3)
-        mask = m.match_missing(mask, max_frame=2, max_distance=20)
+        mask = m.match_missing(mask, max_frame=2, max_distance=5)
         vector[i+1] = m.mitosis_refine()
         m.new_id()
         vector[i+1] = m.return_vectors()
-
-    # write images if necessary
-    # os.chdir(temporary_result)
-    # for i in range(len(images)):
-    #     # write_image(imgpair, 'imgpair', i)
-    #     write_image(threh[i].astype(np.uint8)*255, 'threh', i)
-    #     write_image(enhance_images[i], 'normalize', i)
-    #     write_image(mark[i].astype(np.uint8), 'mark', i)
-    #     write_image(binarymark[i].astype(np.uint8), 'binarymark', i)
-    #     # write_image(tempimg[i].astype(np.uint8), 'tempimg', i)
-    #     write_image(dismap[i].astype(np.uint8), 'dismap', i)
-    # os.chdir(os.pardir)
 
     # write gif image showing the final result
     def find_max_id(temp_vector):

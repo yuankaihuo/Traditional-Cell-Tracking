@@ -5,6 +5,7 @@ This file is to compute watershed given the seed image in the gvf.py.
 import cv2
 import numpy as np
 from numpy import unique
+import copy
 
 class WATERSHED():
 	'''
@@ -38,10 +39,16 @@ class WATERSHED():
 			# compute marker image (labelling)
 			if len(self.markers[i].shape) == 3:
 				self.markers[i] = cv2.cvtColor(self.markers[i],cv2.COLOR_BGR2GRAY)
-			_, mark = cv2.connectedComponents(self.markers[i])
+
+			kernel = np.ones((3, 3), np.uint8)
+			sure_bg = cv2.dilate(self.markers[i], kernel, iterations=3)
+
+			_, markc = cv2.connectedComponents(sure_bg)
+			markd = copy.deepcopy(markc)
+			# markd[self.markers[i]==0] = 0
 			# mark = self.markers[i].astype(np.int32)
 			# watershed!
-			mark = cv2.watershed(imgcolor,mark)
+			mark = cv2.watershed(imgcolor,markd)
 
 			u, counts = unique(mark, return_counts=True)
 			counter = dict(zip(u, counts))

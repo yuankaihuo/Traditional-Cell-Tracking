@@ -268,10 +268,13 @@ class SIMPLE_MATCH():
 		if len(pv0.s[0]) and len(pv1.s[0]):
 			dist = 	alpha1 * centriod_distance(pv0.c, pv1.c)+ \
 					alpha2 * shape_distance(pv0.s[1], pv1.s[1]) * phase + \
-					alpha3 * histogram_distance(pv0.h, pv1.h) * phase + \
 					alpha4 * spatial_distance(pv0.e, pv1.e)
+					# alpha3 * histogram_distance(pv0.h, pv1.h) * phase + \
+					# alpha4 * spatial_distance(pv0.e, pv1.e)
 		else:
 			dist = Max_dis
+
+
 
 		return dist
 
@@ -300,6 +303,7 @@ class SIMPLE_MATCH():
 		def centriod_distance(c0, c1, D=30.):
 			dist = np.sqrt((c0[0]-c1[0])**2 + (c0[1]-c1[1])**2)
 			return dist/D if dist < D else 1
+
 
 		for i, pv1 in enumerate(self.v1):
 			dist = np.ones((len(self.v0), 3), np.float32)
