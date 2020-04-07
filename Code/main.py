@@ -29,6 +29,7 @@ from watershed import WATERSHED as WS
 from graph_construction import GRAPH
 from matching import FEAVECTOR as FEA
 from matching import SIMPLE_MATCH as MAT
+import render
 from PIL import Image
 def set_date(vectors):
 	'''
@@ -323,6 +324,8 @@ def main():
 
     cells = set_date(vector)
     write_info(cells, "res_track")
+
+    render.plot_tracks(vector)
 
     print "finish!"
 
